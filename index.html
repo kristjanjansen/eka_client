@@ -27,27 +27,27 @@
           trainingMessages: [],
           model: "",
           state: {},
-          rules: [{ expression: "label = hi", message: "Hello there" },{ expression: "label = q", message: "I do not know" }]
+          rules: [{ check: 'message = "Hi" ', message: "Hi to you", log: 'Said hi' },{ check: 'label = "hi"', message: "Hello to you too" },{ check: 'label = "goodbye"', message: "Goodbye" }]
         },
         mounted() {
-          this.socket.on("message", d => this.messages.push(d));
           this.socket.on("message", async d => {
             let label = "";
+
             if (this.model) {
               label = (await this.classify(d.message)).data;
-              console.log(label);
             }
+            this.messages.push({ ...d, label });
+            
             this.trainingMessages.push({ message: d, label });
-          });
-          this.socket.on("message", d => {
-            const reply = this.checkRules(d)
+
+            const reply = this.checkRules({ ...d, label })
             if (reply && d.sender !== 'bot') {
               this.socket.emit('message', {
                 message: reply,
                 sender: 'bot'
               })
             }
-          });
+          })
 
           const observer = new MutationObserver(
             () =>
@@ -56,8 +56,15 @@
           observer.observe(this.$refs.messages, { childList: true });
         },
         methods: {
-          checkRules() {
-
+          checkRules(m) {
+            const parser = new index.Parser();
+            for (let i = 0; i < this.rules.length; i++) {
+              const { check, log, message } = this.rules[i]
+              console.log(m)
+              if (parser.parse(check, { message: m.message, label: m.label})) {
+                return message
+              }
+            }
           },
           handleSend() {
             this.socket.emit("message", {
@@ -112,7 +119,7 @@
               class="avatar"
               />
               <div>
-                <div class="name">{{ m.sender.slice(-6) }}</div>
+                <div class="name">{{ m.sender.slice(-6) }} {{ m.label }} </div>
                 <div class="bubble">{{ m.message }}</div>
               </div>
             </div>
@@ -131,7 +138,7 @@
             </tr>
             </table>
             <br>
-            <div v-if="model">
+            <div>
               <p>Model</p>
               <textarea v-model="model" rows="5" />
             </div>
