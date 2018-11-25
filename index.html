@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" media="screen" href="./index.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="http://unpkg.com/vue"></script>
+    <script src="http://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="http://unpkg.com/socket.io-client/dist/socket.io.slim.js"></script>
+    <script src="https://unpkg.com/compromise"></script>
+    <script src="https://unpkg.com/rule-parser"></script>
+    <script type="module">
+      // const parser = new index.Parser();
+      // const expr = 'city = "cupertino"';
+      // const p = parser.parse(expr, { city: 'cupertino', date: new Date() }); // return false;
+
+      new Vue({
+        el: "#app",
+        data: {
+          socket: io.connect("http://localhost:7000"),
+          messages: [],
+          newMessage: "",
+          model: null,
+          trainingMessages: [],
+          model: "",
+          state: {},
+          rules: [{ expression: "label = hi", message: "Hello there" },{ expression: "label = q", message: "I do not know" }]
+        },
+        mounted() {
+          this.socket.on("message", d => this.messages.push(d));
+          this.socket.on("message", async d => {
+            let label = "";
+            if (this.model) {
+              label = (await this.classify(d.message)).data;
+              console.log(label);
+            }
+            this.trainingMessages.push({ message: d, label });
+          });
+          this.socket.on("message", d => {
+            const reply = this.checkRules(d)
+            if (reply && d.sender !== 'bot') {
+              this.socket.emit('message', {
+                message: reply,
+                sender: 'bot'
+              })
+            }
+          });
+
+          const observer = new MutationObserver(
+            () =>
+              (this.$refs.messages.scrollTop = this.$refs.messages.scrollHeight)
+          );
+          observer.observe(this.$refs.messages, { childList: true });
+        },
+        methods: {
+          checkRules() {
+
+          },
+          handleSend() {
+            this.socket.emit("message", {
+              message: this.newMessage,
+              sender: this.socket.id
+            });
+            this.newMessage = "";
+          },
+          handleTraining() {
+            if (this.trainingMessages.length) {
+              const train = this.trainingMessages.map(m => [
+                m.message.message,
+                m.label
+              ]);
+              axios
+                .post(
+                  "https://eka-classifier.now.sh/train?_now_no_cache=1",
+                  train
+                )
+                .then(res => (this.model = JSON.stringify(res.data)))
+                .catch(e => console.log(e));
+            }
+          },
+          async classify(message) {
+            const classify = [message, JSON.parse(this.model)];
+            return axios
+              .post(
+                `https://eka-classifier.now.sh/classify?_now_no_cache=1`,
+                classify
+              )
+              .catch(e => console.log(e));
+          },
+          isMobile() {
+            return (
+              typeof window.orientation !== "undefined" ||
+              navigator.userAgent.indexOf("IEMobile") !== -1
+            );
+          }
+        },
+        template: `
+        <div class="container">
+          <div class="feed">
+          <div ref="messages" class="messages">
+            <div
+              v-for="(m,i) in messages"
+              :key="i"
+              class="message"
+            >
+              <div :style="{
+                backgroundImage: 'url(https://d3iw72m71ie81c.cloudfront.net/88b95197-fd1e-4e11-8793-2903a5cfd06e-10584053_10153749310922416_3125632463004974493_n.jpg)',
+              }"
+              class="avatar"
+              />
+              <div>
+                <div class="name">{{ m.sender.slice(-6) }}</div>
+                <div class="bubble">{{ m.message }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="compose">
+            <input class="input" v-model="newMessage" @keyup.enter="handleSend" />
+            <button @click="handleSend">Send</button>
+          </div>
+          </div>
+          <div class="tools">
+            <button @click="handleTraining">Train classifier</button>
+            <br>
+            <table>
+            <tr v-for="m in trainingMessages">
+              <td>{{ m.message.message }}</td><td><input v-model="m.label" /></td>
+            </tr>
+            </table>
+            <br>
+            <div v-if="model">
+              <p>Model</p>
+              <textarea v-model="model" rows="5" />
+            </div>
+          </div>
+        </div>
+      `
+      });
+    </script>
+  </body>
+</html>
