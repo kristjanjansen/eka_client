@@ -6,6 +6,9 @@ body {
   font-family: sans-serif;
   font-size: 80%;
 }
+p { 
+  margin: 0 0 0.5em 0;
+}
 .container {
   display: flex;
   height: 100vh;
@@ -69,6 +72,8 @@ body {
   background: #222;
   padding: 1rem;
   color: #ddd;
+  overflow: auto;
+  height: 100vh;
 }
 .tools button {
   background: #888;

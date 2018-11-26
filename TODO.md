@@ -1,0 +1,3 @@
+- .toLowerCase())
+- UI tabs (-> components.js)
+- turn off bot
