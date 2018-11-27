@@ -12,11 +12,9 @@
     <script src="https://unpkg.com/socket.io-client/dist/socket.io.slim.js"></script>
     <script src="https://unpkg.com/compromise"></script>
     <script src="https://unpkg.com/rule-parser"></script>
+    <script src="https://unpkg.com/jexl/dist/jexl.min.js"></script>
     <script src="./names.js"></script>
     <script>
-      // const parser = new index.Parser();
-      // const expr = 'city = "cupertino"';
-      // const p = parser.parse(expr, { city: 'cupertino', date: new Date() }); // return false;
 
       const shuffle = arr => arr.sort(() => Math.random() - 0.5);
       const any = function(arr) {
@@ -24,6 +22,8 @@
           ? shuffle(arr)[0]
           : shuffle(Array.from(arguments))[0];
       };
+      const array2object = (arr, keyField) =>
+  Object.assign({}, ...arr.map(item => ({[item[keyField]]: item})))
 
       new Vue({
         el: "#app",
@@ -37,17 +37,17 @@
           state: { },
           rules: [
             {
-              check: 'label = "hi" and greeted <> "1"',
+              check: 'message == "hi" && greeted != "1"',
               message: "Hi!",
               state: "greeted = 1"
             },
             {
-              check: 'label = "hi" and greeted = "1"',
+              check: 'label == "hi" && greeted == "1"',
               message: "Hi again",
               state: ""
             },
             {
-              check: 'label = "bye"',
+              check: 'label == "bye"',
               message: "Ciaobella",
               state: "greeted = 0"
             },
@@ -60,21 +60,34 @@
           botImage:
             "http://chittagongit.com//images/robot-flat-icon/robot-flat-icon-29.jpg"
         },
-        mounted() {
+        async mounted() {
+
+
           this.socket.on("message", async d => {
-            // const data = nlp(d.message).topics().data()
-            // console.log(data)
+            data = {}
+            const people = nlp(d.message).people().data()
+            if (people && people.length) {
+              data.people = people[0]
+            }
+            var jexl = require('Jexl');
+            const a = await jexl.eval('people.normal == "james bond"', { message: d.message, ...data})
+            console.log(a)  
 
             let c = "";
 
             if (this.model) {
               c = (await this.classify(d.message)).data;
             }
-            this.messages.push({ ...d, label: c.classifier });
+            this.messages.push({
+              ...d,
+              label: c.classifier,
+              ...data
+            });
 
             this.trainingMessages.push({...d, label: c.classifier, labels: c.classifiers, message: d.message.toLowerCase() });
 
-            const reply = this.checkRules({ ...d, label: c.classifier });
+            //const reply = this.checkRules({ ...d, label: c.classifier, ...data });
+            const reply = await this.checkRules2({ ...d, label: c.classifier, ...data });
             if (reply && !d.bot) {
               this.socket.emit("message", {
                 message: reply,
@@ -103,6 +116,25 @@
                   label: m.label
                 })
               ) {
+                const s = rules[i].state.split("=").map(s => s.trim());
+                if (s.length == 2) {
+                  Vue.set(this.state, s[0], s[1])
+                }
+                return rules[i].message
+              }
+            }
+          },
+          async checkRules2(m) {
+            var jexl = require('Jexl');
+            const rules = this.rules.filter(r => r.check)
+            for (let i = 0; i < rules.length; i++) {
+              let passed = await jexl.eval(rules[i].check, {
+                  ...this.state,
+                  message: m.message.trim(),
+                  label: m.label
+                })
+
+              if (passed) {
                 const s = rules[i].state.split("=").map(s => s.trim());
                 if (s.length == 2) {
                   Vue.set(this.state, s[0], s[1])
@@ -172,6 +204,7 @@
               <div>
                 <div class="name">{{ m.sender }} | {{ m.label }} </div>
                 <div class="bubble">{{ m.message }}</div>
+                <pre>{{ m }}</pre>
               </div>
             </div>
           </div>
