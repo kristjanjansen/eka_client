@@ -28,7 +28,6 @@
       new Vue({
         el: "#app",
         data: {
-          // socket: io.connect("http://localhost:7000"),
           socket: io.connect("https://eka-server.now.sh"),
           messages: [],
           newMessage: "",
@@ -38,17 +37,17 @@
           state: {},
           rules: [
             {
-              check: 'message = "Hi" and greeted <> "1"',
+              check: 'message = "hi" and greeted <> "1"',
               message: "Hi!",
               state: "greeted = 1"
             },
             {
-              check: 'message = "Hi" and greeted = "1"',
+              check: 'message = "hi" and greeted = "1"',
               message: "Hi again",
               state: ""
             },
             {
-              check: 'message = "Bye"',
+              check: 'message = "bye"',
               message: "Ciaobella",
               state: "greeted = 0"
             },
@@ -73,7 +72,7 @@
             }
             this.messages.push({ ...d, label });
 
-            this.trainingMessages.push({ message: d, label });
+            this.trainingMessages.push({...d, label, message: d.message.toLowerCase() });
 
             const reply = this.checkRules({ ...d, label });
             if (reply && !d.bot) {
@@ -123,7 +122,7 @@
           handleTraining() {
             if (this.trainingMessages.length) {
               const train = this.trainingMessages.map(m => [
-                m.message.message,
+                m.message,
                 m.label
               ]);
               axios
@@ -195,7 +194,7 @@
             <br>
             <table>
             <tr v-for="m in trainingMessages">
-              <td>{{ m.message.message }}</td><td><input v-model="m.label" placeholder="Add label" /></td>
+              <td>{{ m.message }}</td><td><input v-model="m.label" placeholder="Add label" /></td>
             </tr>
             </table>
 

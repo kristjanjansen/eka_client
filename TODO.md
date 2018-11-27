@@ -1,3 +1,4 @@
 - .toLowerCase())
 - UI tabs (-> components.js)
 - turn off bot
+- console.log(classifier.getClassifications('i am long copper'));
