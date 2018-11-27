@@ -65,16 +65,16 @@
             // const data = nlp(d.message).topics().data()
             // console.log(data)
 
-            let label = "";
+            let c = "";
 
             if (this.model) {
-              label = (await this.classify(d.message)).data.classifier;
+              c = (await this.classify(d.message)).data;
             }
-            this.messages.push({ ...d, label });
+            this.messages.push({ ...d, label: c.classifier });
 
-            this.trainingMessages.push({...d, label, message: d.message.toLowerCase() });
+            this.trainingMessages.push({...d, label: c.classifier, labels: c.classifiers, message: d.message.toLowerCase() });
 
-            const reply = this.checkRules({ ...d, label });
+            const reply = this.checkRules({ ...d, label: c.classifier });
             if (reply && !d.bot) {
               this.socket.emit("message", {
                 message: reply,
@@ -200,7 +200,7 @@
             <br>
             <table>
             <tr v-for="m in trainingMessages">
-              <td>{{ m.message }}</td><td><input v-model="m.label" placeholder="Add label" /></td>
+              <td>{{ m.message }}</td><td><input v-model="m.label" placeholder="Add label" /></td><!--td style="white-space: nowrap; overflow: auto;">{{ m.labels }}</td-->
             </tr>
             </table>
 
