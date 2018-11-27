@@ -96,9 +96,8 @@
               ...data
             });
 
-            this.trainingMessages.push({...d, label: c.classifier, labels: c.classifiers, message: d.message.toLowerCase() });
+            //this.trainingMessages.push({...d, label: c.classifier, labels: c.classifiers, message: d.message.toLowerCase() });
 
-            //const reply = this.checkRules({ ...d, label: c.classifier, ...data });
             const reply = await this.checkRules2({ ...d, label: c.classifier, ...data });
             if (reply && !d.bot) {
               this.socket.emit("message", {
@@ -117,6 +116,9 @@
           observer.observe(this.$refs.messages, { childList: true });
         },
         methods: {
+          addTraining(m) {
+            this.trainingMessages.push({...m, message: m.message.toLowerCase() });
+          },
           checkRules(m) {
             const parser = new index.Parser();
             const rules = this.rules.filter(r => r.check)
@@ -215,19 +217,22 @@
               }"
               class="avatar"
               />
-              <div>
-                <div class="name">{{ m.sender }} | {{ m.label }} </div>
-                <div class="bubble">{{ m.message }}</div>
-                <pre style="
-                  margin-top: 1rem;
-                  font-size: 0.65rem;
-                  line-height: 0.9rem;
-                  opacity: 0.5;
-                  overflow: hidden;
-                  width: 40vw;
-                "
-                v-html="JSON.stringify(m,null,1)"
-              />
+              <div style="display: flex; justify-content: space-between;">
+                <div>
+                  <div class="name">{{ m.sender }} | {{ m.label }} </div>
+                  <div class="bubble">{{ m.message }}</div>
+                  <pre style="
+                    margin-top: 1rem;
+                    font-size: 0.65rem;
+                    line-height: 0.9rem;
+                    opacity: 0.5;
+                    overflow: hidden;
+                    width: 40vw;
+                  "
+                  v-html="JSON.stringify(m,null,1)"
+                  />
+                </div>
+                <div style="opacity: 0.3; margin-top: 1rem; cursor: pointer; font-size: 1rem;"" @click="addTraining(m)">+</div>
               </div>
             </div>
           </div>
