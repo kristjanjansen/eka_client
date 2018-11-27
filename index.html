@@ -22,8 +22,19 @@
           ? shuffle(arr)[0]
           : shuffle(Array.from(arguments))[0];
       };
-      const array2object = (arr, keyField) =>
-  Object.assign({}, ...arr.map(item => ({[item[keyField]]: item})))
+      function tpl(str, vars) {
+        const keys = Object.keys(vars);
+        const values = Object.values(vars);
+        let tplFun = new Function(...keys, `return \`${str}\`;`);
+        return tplFun(...values);
+      }
+      const removeEmpty = (obj) => {
+        Object.keys(obj).forEach(k =>
+          (obj[k] && typeof obj[k] === 'object') && removeEmpty(obj[k]) ||
+          (!obj[k] && obj[k] !== undefined) && delete obj[k] || (obj[k].length && obj[k].length < 1) && delete obj[k]
+        );
+        return obj;
+      };
 
       new Vue({
         el: "#app",
@@ -58,20 +69,21 @@
           userImage:
             "https://pbs.twimg.com/profile_images/1017033035450109953/s6tpyPoa.jpg",
           botImage:
-            "http://chittagongit.com//images/robot-flat-icon/robot-flat-icon-29.jpg"
+            "http://chittagongit.com//images/robot-flat-icon/robot-flat-icon-29.jpg",
+          tabIndex: 0
         },
         async mounted() {
 
 
           this.socket.on("message", async d => {
-            data = {}
-            const people = nlp(d.message).people().data()
-            if (people && people.length) {
-              data.people = people[0]
-            }
-            var jexl = require('Jexl');
-            const a = await jexl.eval('people.normal == "james bond"', { message: d.message, ...data})
-            console.log(a)  
+            data = {};
+            const tags = ['values','dates','people','organizations','places','phoneNumbers','urls','questions']
+            tags.forEach(tag => {
+              const tagData = (nlp(d.message)[tag])().data()
+              if (tagData && tagData.length) {
+                data[tag.slice(0,tag.length)] = tagData[0].number || tagData[0].normal
+              }
+            })
 
             let c = "";
 
@@ -126,12 +138,14 @@
           },
           async checkRules2(m) {
             var jexl = require('Jexl');
+            jexl.addTransform('match', function(val, pattern) {
+                return val.match(pattern);
+            });
             const rules = this.rules.filter(r => r.check)
             for (let i = 0; i < rules.length; i++) {
               let passed = await jexl.eval(rules[i].check, {
-                  ...this.state,
-                  message: m.message.trim(),
-                  label: m.label
+                  ...m,
+                  ...this.state
                 })
 
               if (passed) {
@@ -139,7 +153,7 @@
                 if (s.length == 2) {
                   Vue.set(this.state, s[0], s[1])
                 }
-                return rules[i].message
+                return tpl(rules[i].message, {...m, ...this.state})
               }
             }
           },
@@ -204,7 +218,16 @@
               <div>
                 <div class="name">{{ m.sender }} | {{ m.label }} </div>
                 <div class="bubble">{{ m.message }}</div>
-                <pre>{{ m }}</pre>
+                <pre style="
+                  margin-top: 1rem;
+                  font-size: 0.65rem;
+                  line-height: 0.9rem;
+                  opacity: 0.5;
+                  overflow: hidden;
+                  width: 40vw;
+                "
+                v-html="JSON.stringify(m,null,1)"
+              />
               </div>
             </div>
           </div>
@@ -214,38 +237,57 @@
           </div>
           </div>
           <div class="tools">
-            <p>CONVERSATION</p>
-            <p>State</p>
-            <div style="font-size: 0.7rem; color: orange; white-space: pre">{{ formattedState }}</div>
-            <br>
+            <div style="display: flex">
+              <div 
+                v-for="t,i in ['Labelling', 'Bot', 'Config']"
+                style="cursor: pointer; padding: 0 1rem 1rem 0; text-transform: uppercase;"
+                :style="{ opacity: i == tabIndex ? 1 : 0.5 }"
+                @click="tabIndex = i"
+              >{{ t }}
+              </div>
+            </div>
+
+            <div v-if="tabIndex == 1">
+
             <p>Rules</p>
+            <table>
             <tr v-for="r in rules">
               <td style="width: 50%"><input style="width: 100%" v-model="r.check" placeholder="condition" /></td>
               <td style="width: 30%"><input style="width: 100%" v-model="r.message" placeholder="message" /></td>
               <td style="width: 30%"><input style="width: 100%" v-model="r.state" placeholder="state" /></td>
             </tr>
-            <br>
-            <p>LABELS</p>
-            <p>Model</p>
-            <textarea v-model="model" rows="5" placeholder="Paste existing model or add new messages to training set." />   <br>
-            <p v-if="trainingMessages.length"><button @click="handleTraining">Train model for labelling</button></p>
-            
-            <br>
-            <table>
-            <tr v-for="m in trainingMessages">
-              <td>{{ m.message }}</td><td><input v-model="m.label" placeholder="Add label" /></td><!--td style="white-space: nowrap; overflow: auto;">{{ m.labels }}</td-->
-            </tr>
             </table>
+            <br>
+            <p>State</p>
+            <div v-if="!formattedState" style="font-size: 0.7rem; opacity: 0.25">Rules can set and unset the state</div>
+            <div style="font-size: 0.7rem; color: orange; white-space: pre">{{ formattedState }}</div>
+        
+            </div>
 
-            <br>
-            <p>CONFIG</p>
-            <p>User</p>
-            <input v-model="userName" style="width: 100%" />
-            <input v-model="userImage" style="width: 100%" />
-            <br>
-            <p>Bot</p>
-            <input v-model="botName" style="width: 100%" />
-            <input v-model="botImage" style="width: 100%" />
+            <div v-if="tabIndex == 0">
+              <p>Model</p>
+              <textarea v-model="model" rows="5" placeholder="Paste existing model or add new messages to training set." />   <br>
+              <p v-if="trainingMessages.length"><button @click="handleTraining">Train model for labelling</button></p>
+              
+              <br>
+              <table>
+              <tr v-for="m in trainingMessages">
+                <td>{{ m.message }}</td><td><input v-model="m.label" placeholder="Add label" /></td><!--td style="white-space: nowrap; overflow: auto;">{{ m.labels }}</td-->
+              </tr>
+              </table>
+            </div>
+
+            <div v-if="tabIndex == 2">
+              <p>User name</p>
+              <input v-model="userName" style="width: 100%" />
+              <br><br><p>User image</p>
+              <input v-model="userImage" style="width: 100%" />
+              <br><br><p>Bot name</p>
+              <input v-model="botName" style="width: 100%" />
+              <br><br><p>Bot image</p>
+              <input v-model="botImage" style="width: 100%" />
+            </div>
+
           </div>
         </div>
       `
