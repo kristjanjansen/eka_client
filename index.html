@@ -64,6 +64,7 @@
             },
             { check: "", message: "", state: "" }
           ],
+          botEnabled: false,
           userName: any(animals),
           botName: any(pokemons),
           userImage:
@@ -99,15 +100,16 @@
             });
 
             //this.trainingMessages.push({...d, label: c.classifier, labels: c.classifiers, message: d.message.toLowerCase() });
-
-            const reply = await this.checkRules2({ ...d, label: c.classifier, ...data });
-            if (reply && !d.bot) {
-              this.socket.emit("message", {
-                message: reply,
-                sender: this.botName,
-                image: this.botImage,
-                bot: true
-              });
+            if (this.botEnabled) {
+              const reply = await this.checkRules2({ ...d, label: c.classifier, ...data });
+              if (reply && !d.bot) {
+                this.socket.emit("message", {
+                  message: reply,
+                  sender: this.botName,
+                  image: this.botImage,
+                  bot: true
+                });
+              }
             }
           });
 
@@ -255,6 +257,9 @@
             </div>
 
             <div v-if="tabIndex == 1">
+
+            <p><input type="checkbox" v-model="botEnabled"> Bot enabled</p>
+            <br>
 
             <p>Rules</p>
             <table>
