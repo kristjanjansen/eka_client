@@ -256,7 +256,7 @@
             <input class="input" v-model="newMessage" @keyup.enter="handleSend" />
             <button @click="handleSend">Send</button>
           </div>
-          <div style="font-family: monospace; color: gray; padding: 0 1rem 1rem 1rem;">
+          <div v-if="extend" style="font-family: monospace; color: gray; padding: 0 1rem 1rem 1rem;">
             <table>
               <tr><td>to:</td><td><input v-model="newTo" /></td></tr>
               <tr><td>color:</td><td><input type="color" v-model="newColor" /></td></tr>
@@ -293,7 +293,7 @@
             <div v-if="!formattedState" style="font-size: 0.7rem; opacity: 0.25">Rules can set and unset the state</div>
             <div style="font-size: 0.7rem; color: orange; white-space: pre">{{ formattedState }}</div>
 
-                            <br><br><p>Bot name</p>
+              <br><br><p>Bot name</p>
               <input v-model="botName" style="width: 100%" />
               <br><br><p>Bot image</p>
               <input v-model="botImage" style="width: 100%" />
@@ -320,7 +320,7 @@
               <input v-model="userImage" style="width: 100%" />
               <br><br><p>Server</p>
               <input v-model="server" style="width: 100%" />
-              <br><br><p>Extend incoming data</p>
+              <br><br><p>Extend</p>
               <input type="checkbox" v-model="extend">
 
             </div>
