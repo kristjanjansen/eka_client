@@ -13,6 +13,7 @@
     <script src="https://unpkg.com/compromise"></script>
     <script src="https://unpkg.com/rule-parser"></script>
     <script src="https://unpkg.com/jexl/dist/jexl.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/animate.css@3.5.1" rel="stylesheet" type="text/css">
     <script src="./names.js"></script>
     <script>
 
@@ -42,6 +43,9 @@
           socket: null,
           messages: [],
           newMessage: "",
+          newTo: "",
+          newColor: "#4169e1",
+          newAnimation: "",
           model: null,
           trainingMessages: [],
           model: "",
@@ -168,6 +172,9 @@
               message: this.newMessage,
               sender: this.userName,
               image: this.userImage,
+              to: this.newTo,
+              color: this.newColor,
+              animation: this.newAnimation
             });
             this.newMessage = "";
           },
@@ -224,7 +231,12 @@
               <div style="display: flex; justify-content: space-between;">
                 <div>
                   <div class="name">{{ m.sender }}</div>
-                  <div class="bubble">{{ m.message }}</div>
+                  <transition appear
+                    name="custom-classes-transition"
+                    :enter-active-class="'animated ' + (m.animation ? m.animation : '')"
+                  >
+                    <div class="bubble" :style="{background: m.color ? m.color: 'royalblue'}">{{ m.message }}</div>
+                  </transition>
                   <pre v-if="extend" style="
                     margin-top: 1rem;
                     font-size: 0.65rem;
@@ -243,6 +255,13 @@
           <div class="compose">
             <input class="input" v-model="newMessage" @keyup.enter="handleSend" />
             <button @click="handleSend">Send</button>
+          </div>
+          <div style="font-family: monospace; color: gray; padding: 0 1rem 1rem 1rem;">
+            <table>
+              <tr><td>to:</td><td><input v-model="newTo" /></td></tr>
+              <tr><td>color:</td><td><input type="color" v-model="newColor" /></td></tr>
+              <tr><td>animation:</td><td><input v-model="newAnimation" /></td></tr>
+            </table>
           </div>
           </div>
           <div class="tools" v-if="!isMobile">
