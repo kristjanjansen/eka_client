@@ -97,13 +97,15 @@
             if (this.model) {
               c = (await this.classify(d.message)).data;
             }
-            this.messages.push({
-              ...d,
-              label: c.classifier,
-              ...data
-            });
 
-            //this.trainingMessages.push({...d, label: c.classifier, labels: c.classifiers, message: d.message.toLowerCase() });
+            if (!d.to || d.to && d.to == this.userName) {
+              this.messages.push({
+                ...d,
+                label: c.classifier,
+                ...data
+              });
+            }
+
             if (this.botEnabled) {
               const reply = await this.checkRules2({ ...d, label: c.classifier, ...data });
               if (reply && !d.bot) {
@@ -115,6 +117,8 @@
                 });
               }
             }
+
+
           });
 
           const observer = new MutationObserver(
@@ -230,7 +234,7 @@
               />
               <div style="display: flex; justify-content: space-between;">
                 <div>
-                  <div class="name">{{ m.sender }}</div>
+                  <div class="name">{{ m.sender }} {{ m.to ? 'only to you' : '' }}</div>
                   <transition appear
                     name="custom-classes-transition"
                     :enter-active-class="'animated ' + (m.animation ? m.animation : '')"
