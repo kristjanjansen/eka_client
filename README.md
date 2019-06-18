@@ -1,4 +1,4 @@
-## EKA Classifier
+## EKA Client
 
 A messaging client written in VueJS.
 
