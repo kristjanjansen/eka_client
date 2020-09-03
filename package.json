@@ -8,6 +8,6 @@
     "alias": "eka-client"
   },
   "dependencies": {
-    "serve": "^10.1.1"
+    "serve": "^10.1.2"
   }
 }
